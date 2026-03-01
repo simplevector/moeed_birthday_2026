@@ -15,7 +15,6 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body { background-color: var(--bg-color); -webkit-overflow-scrolling: touch; }
 
         .main-container {
@@ -40,11 +39,9 @@
             background-color: var(--bg-color);
         }
 
-        /* Canvas parented inside chai-section; overflow:hidden on section clips it there only */
         #smoke-canvas {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             z-index: 0;
             pointer-events: none;
         }
@@ -84,26 +81,50 @@
             width: auto;
         }
 
-        #lighter-img {
-            left: 2%;
-            max-height: 60vh;
-        }
+        #lighter-img { left: 2%; max-height: 60vh; }
 
         @keyframes floatAndRotate {
-            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
-            25% { transform: translate(5px, 5px) rotate(90deg); }
-            50% { transform: translate(0px, -5px) rotate(180deg); }
-            75% { transform: translate(-5px, 5px) rotate(270deg); }
-            100% { transform: translate(0px, 0px) rotate(360deg); }
+            0%, 100% { transform: translate(0px,  0px) rotate(0deg);   }
+            25%      { transform: translate(5px,  5px) rotate(90deg);  }
+            50%      { transform: translate(0px, -5px) rotate(180deg); }
+            75%      { transform: translate(-5px, 5px) rotate(270deg); }
         }
 
         #cup-img {
-            right: 3%;
-            max-height: 45vh;
-            z-index: 5;
-            top: 3%;
+            right: 3%; max-height: 45vh; z-index: 5; top: 3%;
             animation: floatAndRotate 10s linear infinite;
             transform-origin: center;
+        }
+
+        #nation-section .content-layer {
+            top: 5vh;
+            bottom: auto;
+        }
+
+        .car-image {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            max-height: 28vh;
+            width: auto;
+        }
+
+        #nation-stripe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* --- New Styles for Camera Section --- */
+        #camera-img {
+            left: 0;
+            max-height: 85vh;
+            z-index: 2;
+            transition: all 0.3s ease;
         }
 
         @media (max-width: 768px) {
@@ -111,6 +132,18 @@
             .subtitle { font-size: 8vw; }
             #lighter-img { max-height: 40vh; left: -10%; }
             #cup-img { max-height: 50vh; right: -10%; animation: none; }
+            .car-image { max-height: 30vh; }
+            #small-car { width: 55px; }
+
+            /* Mobile Responsiveness for Camera */
+            #camera-img {
+                left: auto;
+                right: 0; /* Align to right edge */
+                max-height: 50vh;
+                transform: rotate(-90deg);
+                transform-origin: bottom right;
+                bottom: 10vh; /* Lift slightly off absolute bottom if needed, or set to 0 */
+            }
         }
     </style>
 </head>
@@ -124,115 +157,257 @@
             <p class="subtitle">moeed turns 20</p>
         </div>
         <img src="assets/lighter.png" alt="Lighter" id="lighter-img" class="section-image">
-        <img src="assets/cup.png" alt="Tea Cup" id="cup-img" class="section-image">
+        <img src="assets/cup.png"     alt="Tea Cup" id="cup-img"     class="section-image">
     </section>
 
     <section id="nation-section">
+        <svg id="nation-stripe" xmlns="http://www.w3.org/2000/svg"></svg>
         <div class="content-layer">
             <h1>AROUND THE NATION</h1>
         </div>
+        <img src="assets/car.png" alt="Car" class="car-image">
     </section>
 
     <section id="camera-section">
         <div class="content-layer">
-            <h1>CAMERA</h1>
+            <h1>MEOMRIES</h1>
         </div>
+        <img src="assets/camera.png" alt="Camera" id="camera-img" class="section-image">
     </section>
 
 </div>
 
 <script>
-    const numParticles = 120;
-    let particles = [];
-    let emitterX = 0;
-    let emitterY = 0;
+/* ── Section 1: Smoke (p5.js) ── */
+const numParticles = 120;
+let particles = [];
+let emitterX = 0, emitterY = 0;
 
-    // Compute emitter position relative to the section (= canvas origin)
-    function computeEmitter() {
-        const section = document.getElementById('chai-section');
-        const lighter = document.getElementById('lighter-img');
-        const sRect   = section.getBoundingClientRect();
-        const lRect   = lighter.getBoundingClientRect();
-        emitterX = (lRect.left - sRect.left) + lRect.width * 0.33;
-        emitterY = (lRect.top  - sRect.top);
+function computeEmitter() {
+    const section = document.getElementById('chai-section');
+    const lighter = document.getElementById('lighter-img');
+    if(!section || !lighter) return;
+    const sRect   = section.getBoundingClientRect();
+    const lRect   = lighter.getBoundingClientRect();
+    emitterX = (lRect.left - sRect.left) + lRect.width * 0.33;
+    emitterY = (lRect.top  - sRect.top);
+}
+
+function setup() {
+    const section = document.getElementById('chai-section');
+    let canvas = createCanvas(section.offsetWidth, section.offsetHeight);
+    canvas.id('smoke-canvas');
+    canvas.parent('chai-section');
+    background(230, 223, 208);
+    computeEmitter();
+    for (let i = 0; i < numParticles; i++) {
+        const p = new Particle();
+        p.reset(emitterX, emitterY);
+        p.lifespan = random(0, 400);
+        particles.push(p);
+    }
+}
+
+function draw() {
+    background(230, 223, 208, 5);
+    computeEmitter();
+    particles.forEach(p => { p.update(); p.display(emitterX, emitterY); });
+}
+
+function windowResized() {
+    const section = document.getElementById('chai-section');
+    resizeCanvas(section.offsetWidth, section.offsetHeight);
+    computeEmitter();
+    if (stripeAnimated) {
+        stripeAnimated = false;
+        buildNationStripe();
+        animateNationStripe();
+    }
+}
+
+class Particle {
+    constructor() {
+        this.pos = createVector(0, 0);
+        this.prevPos = this.pos.copy();
+        this.lifespan = random(200, 350);
+    }
+    reset(x, y) {
+        this.pos = createVector(x, y);
+        this.prevPos = this.pos.copy();
+        this.speed = random(1.5, 3);
+        this.lifespan = random(250, 400);
+    }
+    update() {
+        const noiseVal = noise(this.pos.x * 0.003, this.pos.y * 0.003, frameCount * 0.003);
+        const angle    = map(noiseVal, 0, 1, -PI, PI / 2);
+        this.prevPos   = this.pos.copy();
+        this.pos.x    += cos(angle) * this.speed;
+        this.pos.y    += sin(angle) * this.speed;
+        this.lifespan -= 0.5;
+    }
+    display(ex, ey) {
+        if (this.lifespan < 0 || this.pos.x > width || this.pos.y < 0 || this.pos.x < 0) {
+            this.reset(ex, ey);
+        }
+        stroke(186, 10, 10, map(this.lifespan, 0, 400, 0, 120));
+        strokeWeight(1);
+        line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
+    }
+}
+
+/* ── Section 2: Nation Stripe + Car ── */
+let stripeAnimated = false;
+let stripeGeometry = null;
+
+function buildNationStripe() {
+    const section = document.getElementById('nation-section');
+    const svg     = document.getElementById('nation-stripe');
+    const W = section.offsetWidth;
+    const H = section.offsetHeight;
+
+    const yMin = H * 0.30; 
+    const yMax = H * 0.65; 
+
+    const y1 = yMin + Math.random() * (yMax - yMin);
+    const y2 = yMin + Math.random() * (yMax - yMin);
+
+    const extra = 40;
+    const x1 = -extra;
+    const x2 = W + extra;
+    const slope = (y2 - y1) / W;
+    const ey1   = y1 - slope * extra;
+    const ey2   = y2 + slope * extra;
+
+    const rad = Math.atan2(y2 - y1, W);
+
+    const thick = 14, gap = 6, thin = 5;
+    const perpX = -Math.sin(rad);
+    const perpY =  Math.cos(rad);
+    const po    = thick / 2 + gap + thin / 2;
+    const tx1 = x1 + perpX * po, ty1 = ey1 + perpY * po;
+    const tx2 = x2 + perpX * po, ty2 = ey2 + perpY * po;
+
+    const lineLen = Math.hypot(x2 - x1, ey2 - ey1);
+
+    stripeGeometry = { x1: 0, y1, x2: W, y2, rad, W , ty1, ty2};
+
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.innerHTML = `
+        <line id="stripe-thick"
+              x1="${x1}"  y1="${ey1}" x2="${x2}"  y2="${ey2}"
+              stroke="#ba0a0a" stroke-width="${thick}" stroke-linecap="butt"
+              stroke-dasharray="${lineLen}" stroke-dashoffset="${lineLen}"/>
+        <line id="stripe-thin"
+              x1="${tx1}" y1="${ty1}" x2="${tx2}" y2="${ty2}"
+              stroke="#ba0a0a" stroke-width="${thin}"  stroke-linecap="butt"
+              stroke-dasharray="${lineLen}" stroke-dashoffset="${lineLen}"/>
+    `;
+}
+
+function animateSmallCar() {
+    if (!stripeGeometry) return;
+    const { x1, y1, x2, y2, rad, W , ty1, ty2} = stripeGeometry;
+
+    const car = document.createElement('img');
+    car.src = 'assets/small_car.png';
+    car.id = 'small-car';
+    car.style.cssText = `
+        position: absolute;
+        width: 90px;
+        height: auto;
+        opacity: 0;
+        pointer-events: none;
+        transform-origin: center center;
+        will-change: transform;
+        z-index: 4;
+    `;
+    document.getElementById('nation-section').appendChild(car);
+
+    function runAnim() {
+        car.style.position = 'absolute';
+        car.style.left = '0';
+        car.style.top = '0';
+
+        const carW = car.offsetWidth  || 80;
+        const carH = car.offsetHeight || 50;
+
+        const startX   = -carW;
+        const endX     = W + carW;
+        const duration = 4000;
+        let   startTS  = null;
+
+        car.style.opacity = '1';
+
+        function step(ts) {
+            if (!startTS) startTS = ts;
+            const progress = Math.min((ts - startTS) / duration, 1);
+            const currentX = startX + (endX - startX) * progress;
+
+            const t      = (currentX - x1) / (x2 - x1);
+            const thickY = y1 + t * (y2 - y1);
+            const thinY  = ty1 + t * (ty2 - ty1);
+            const lineY  = (thickY + thinY) / 2;
+
+            const angleDeg = rad * 180 / Math.PI;
+
+            car.style.transform =
+                `translate(${currentX - carW / 2}px, ${lineY - carH / 2}px) rotate(${angleDeg}deg)`;
+
+            if (progress < 1) requestAnimationFrame(step);
+            else car.style.opacity = '0';
+        }
+
+        requestAnimationFrame(step);
     }
 
-    function setup() {
-        const section = document.getElementById('chai-section');
-
-        // FIX 1: size canvas to match the section, and parent it inside the section
-        // The section has overflow:hidden so the canvas is visually clipped to section 1 only
-        let canvas = createCanvas(section.offsetWidth, section.offsetHeight);
-        canvas.id('smoke-canvas');
-        canvas.parent('chai-section');
-
-        background(230, 223, 208);
-
-        // FIX 2: compute emitter before creating any particles so they spawn at the
-        // correct position from frame 1 — no click/interaction needed
-        computeEmitter();
-
-        for (let i = 0; i < numParticles; i++) {
-            const p = new Particle();
-            p.reset(emitterX, emitterY);
-            // Stagger starting lifespans so trails are already spread on load
-            p.lifespan = random(0, 400);
-            particles.push(p);
-        }
+    if (car.complete && car.naturalWidth) {
+        runAnim();
+    } else {
+        car.addEventListener('load', runAnim, { once: true });
     }
+}
 
-    function draw() {
-        background(230, 223, 208, 5);
+function animateNationStripe() {
+    if (stripeAnimated) return;
+    stripeAnimated = true;
 
-        // Re-compute each frame — cheap and keeps emitter correct after any resize/reflow
-        computeEmitter();
+    const thick = document.getElementById('stripe-thick');
+    const thin  = document.getElementById('stripe-thin');
+    if (!thick || !thin) return;
 
-        particles.forEach(p => {
-            p.update();
-            p.display(emitterX, emitterY);
-        });
+    const len      = parseFloat(thick.getAttribute('stroke-dasharray'));
+    const duration = 300;
+    let   start    = null;
+
+    thick.style.strokeDashoffset = -len;
+    thin.style.strokeDashoffset  = -len;
+
+    function step(ts) {
+        if (!start) start = ts;
+        const t      = Math.min((ts - start) / duration, 1);
+        const ease   = t;
+        const offset = -len * (1 - ease);
+        thick.style.strokeDashoffset = offset;
+        thin.style.strokeDashoffset  = offset;
+        if (t < 1) requestAnimationFrame(step);
+        else animateSmallCar();
     }
+    requestAnimationFrame(step);
+}
 
-    function windowResized() {
-        const section = document.getElementById('chai-section');
-        resizeCanvas(section.offsetWidth, section.offsetHeight);
-        computeEmitter();
-    }
-
-    class Particle {
-        constructor() {
-            this.pos      = createVector(0, 0);
-            this.prevPos  = this.pos.copy();
-            this.lifespan = random(200, 350);
-        }
-
-        reset(x, y) {
-            this.pos      = createVector(x, y);
-            this.prevPos  = this.pos.copy();
-            this.speed    = random(1.5, 3);
-            this.lifespan = random(250, 400);
-        }
-
-        update() {
-            let noiseVal = noise(this.pos.x * 0.003, this.pos.y * 0.003, frameCount * 0.003);
-            let angle    = map(noiseVal, 0, 1, -PI, PI / 2);
-
-            this.prevPos = this.pos.copy();
-            this.pos.x  += cos(angle) * this.speed;
-            this.pos.y  += sin(angle) * this.speed;
-
-            this.lifespan -= 0.5;
-        }
-
-        display(ex, ey) {
-            if (this.lifespan < 0 || this.pos.x > width || this.pos.y < 0 || this.pos.x < 0) {
-                this.reset(ex, ey);
+window.addEventListener('load', () => {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                buildNationStripe();
+                animateNationStripe();
+                observer.disconnect();
             }
-            stroke(186, 10, 10, map(this.lifespan, 0, 400, 0, 120));
-            strokeWeight(1);
-            line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
-        }
-    }
+        });
+    }, { threshold: 0.99 });
+
+    observer.observe(document.getElementById('nation-section'));
+});
 </script>
 </body>
 </html>
