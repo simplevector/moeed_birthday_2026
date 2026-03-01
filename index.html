@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday!</title>
+    <style>
+        /* This creates the 'Snap' effect */
+        html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+        body { margin: 0; font-family: 'Arial Black', sans-serif; text-transform: uppercase; }
+
+        section {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            scroll-snap-align: start;
+            position: relative;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        /* Section Colors based on your images */
+        .sec-1 { background-color: #2d8a4e; color: #f5d44b; } /* Green */
+        .sec-2 { background-color: #1a1a1a; color: white; }   /* Black */
+        .sec-3 { background-color: #e6b821; color: #1a1a1a; } /* Yellow */
+
+        h1 { font-size: 5rem; margin: 0; letter-spacing: -2px; }
+        p { font-size: 1rem; margin-top: 10px; }
+        
+        /* Quick styling for those floating images/polaroids */
+        .polaroid {
+            position: absolute;
+            width: 150px;
+            padding: 10px;
+            background: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transform: rotate(-5deg);
+        }
+    </style>
+</head>
+<body>
+
+    <section class="sec-1">
+        <div class="polaroid" style="top:10%; left:10%;"> <img src="pic1.jpg" width="100%"> </div>
+        <h1>TASNEEM</h1>
+        <p>Turns 20 Today</p>
+    </section>
+
+    <section class="sec-2">
+        <img src="cake.png" style="width: 200px; border-radius: 50%;">
+        <p>EAT THE CAKE • SIKE THERES NO CAKE</p>
+    </section>
+
+    <section class="sec-3">
+        <h1>HAPPY BIRTHDAY!</h1>
+        <p>P.S. Party kab de raha hai?</p>
+    </section>
+
+</body>
+</html>
