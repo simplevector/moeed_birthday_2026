@@ -15,8 +15,30 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
-        body { background-color: var(--bg-color); -webkit-overflow-scrolling: touch; }
-        /* img { -webkit-user-drag: none; user-drag: none; } */
+        body { background-color: var(--bg-color); -webkit-overflow-scrolling: touch; cursor: none; }
+
+        /* ── Custom Cursor ── */
+        #custom-cursor {
+            position: fixed;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 99999;
+            mix-blend-mode: difference;
+            background: #ffffff;
+            transform: translate(-50%, -50%);
+            transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+                        width 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+                        height 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: transform, width, height;
+            top: 0;
+            left: 0;
+        }
+        #custom-cursor.enlarged {
+            width: 52px;
+            height: 52px;
+        }
 
         .main-container {
             height: 100vh;
@@ -112,12 +134,20 @@
             position: absolute;
             z-index: 12;
             box-sizing: border-box;
+            transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .chai-pola img {
             display: block;
             width: 100%;
             height: auto;
             border-radius: 2px;
+        }
+
+        /* Hover scale for section 1 personal photos */
+        .chai-pola:hover {
+            transform: rotate(var(--rot)) scale(1.13) !important;
+            animation-play-state: paused !important;
+            z-index: 50;
         }
 
         /* ── Section 2 slap photos ── */
@@ -132,6 +162,7 @@
             z-index: 20;
             opacity: 0;
             pointer-events: none;
+            transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .nation-photo img {
             display: block;
@@ -141,6 +172,12 @@
         }
         .nation-photo.slapped {
             animation: slapIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        /* Hover scale for section 2 personal photos */
+        .nation-photo.slapped:hover,
+        .nation-photo[style*="pointer-events: auto"]:hover {
+            transform: scale(1.13) rotate(var(--rot)) !important;
+            z-index: 50;
         }
 
         #nation-section .content-layer {
@@ -233,10 +270,14 @@
             .car-image { max-height: 30vh; }
             #small-car { width: 55px; }
             #camera-img { max-height: 60vh; }
+            #custom-cursor { display: none; }
         }
     </style>
 </head>
 <body>
+
+<!-- Custom Cursor -->
+<div id="custom-cursor"></div>
 
 <div class="main-container">
 
@@ -295,6 +336,41 @@
 
 <script>
 /* ══════════════════════════════════════════════
+   Custom Cursor
+══════════════════════════════════════════════ */
+(function() {
+    const cursor = document.getElementById('custom-cursor');
+    let mouseX = -100, mouseY = -100;
+
+    document.addEventListener('mousemove', e => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        cursor.style.left = mouseX + 'px';
+        cursor.style.top  = mouseY + 'px';
+    });
+
+    document.addEventListener('mouseleave', () => {
+        cursor.style.left = '-100px';
+        cursor.style.top  = '-100px';
+    });
+
+    // Enlarge cursor when hovering personal photos
+    const photoSelectors = '.chai-pola, .nation-photo';
+
+    function attachCursorHover(el) {
+        el.addEventListener('mouseenter', () => cursor.classList.add('enlarged'));
+        el.addEventListener('mouseleave', () => cursor.classList.remove('enlarged'));
+    }
+
+    // Attach to existing elements
+    document.querySelectorAll('.chai-pola').forEach(attachCursorHover);
+    document.querySelectorAll('.nation-photo').forEach(attachCursorHover);
+
+    // Expose for dynamically added elements
+    window.attachCursorHoverToEl = attachCursorHover;
+})();
+
+/* ══════════════════════════════════════════════
    Section 1 Polaroids – size, position, animate
 ══════════════════════════════════════════════ */
 function initChaiPolaroids() {
@@ -332,8 +408,8 @@ function initChaiPolaroids() {
             transform: rotate(${cfg.rot});
             animation: ${cfg.anim};
             transform-origin: center center;
-            cursor: pointer;
-            transition: opacity 0.3s ease;
+            cursor: none;
+            transition: opacity 0.3s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
         `;
 
         card.addEventListener('click', () => {
@@ -388,8 +464,8 @@ function burstConfetti(originX, originY) {
         pieces.forEach(p => {
             p.x   += p.vx;
             p.y   += p.vy;
-            p.vy  += 0.4;          // gravity
-            p.vx  *= 0.98;         // air drag
+            p.vy  += 0.4;
+            p.vx  *= 0.98;
             p.rot += p.rvel;
             p.alpha = Math.max(0, 1 - progress * 1.3);
 
@@ -579,7 +655,7 @@ function animateSmallCar() {
         const endX     = W + carW;
         const duration = 4000;
         let   startTS  = null;
-        let   midFired = false; // track midway trigger
+        let   midFired = false;
 
         car.style.opacity = '1';
 
@@ -598,7 +674,6 @@ function animateSmallCar() {
             car.style.transform =
                 `translate(${currentX - carW / 2}px, ${lineY - carH / 2}px) rotate(${angleDeg}deg)`;
 
-            // At 50% car progress → slap the photos in
             if (!midFired && progress >= 0.5) {
                 midFired = true;
                 slapNationPhotos();
@@ -624,14 +699,12 @@ function slapNationPhotos() {
     const sW = section.offsetWidth;
     const sH = section.offsetHeight;
 
-    const imgW = Math.round(sW * 0.09); // same size as section 1 photos
+    const imgW = Math.round(sW * 0.09);
 
-    // Car is max-height 28vh anchored bottom:0 → its top edge ≈ sH * 0.72
-    // Image is imgW wide, roughly square-ish. Keep bottom edge of photo above car top.
-    const carTopApprox = sH * 0.70; // conservative — keep photos above this
-    const imgH         = imgW * 1.3; // rough portrait aspect
+    const carTopApprox = sH * 0.70;
+    const imgH         = imgW * 1.3;
 
-    const safeBottom = carTopApprox - imgH - 10; // max top value so bottom edge clears car
+    const safeBottom = carTopApprox - imgH - 10;
 
     const configs = [
         { id: 'nation-photo-1', left: Math.round(sW * 0.18), top: Math.round(Math.min(sH * 0.18, safeBottom)),  rot: '-6deg',  delay: 0   },
@@ -648,26 +721,26 @@ function slapNationPhotos() {
             top:  ${cfg.top}px;
             --rot: ${cfg.rot};
             transform-origin: center center;
+            cursor: none;
         `;
         const img = el.querySelector('img');
         if (img) img.style.width = imgW + 'px';
 
         setTimeout(() => {
             el.classList.add('slapped');
-            // Enable clicks once visible
             el.style.pointerEvents = 'auto';
-            el.style.cursor = 'pointer';
+            // attach cursor enlargement after it becomes interactive
+            if (window.attachCursorHoverToEl) window.attachCursorHoverToEl(el);
         }, cfg.delay);
 
         el.addEventListener('click', () => {
-    const rect = el.getBoundingClientRect();
-    burstConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    
-    // CHANGE THIS LINE
-    el.style.setProperty('opacity', '0', 'important'); 
-    
-    el.style.pointerEvents = 'none';
-});
+            const rect = el.getBoundingClientRect();
+            burstConfetti(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            el.style.setProperty('opacity', '0', 'important');
+            el.style.pointerEvents = 'none';
+            // remove enlarged class in case mouse is still over
+            document.getElementById('custom-cursor').classList.remove('enlarged');
+        });
     });
 }
 
@@ -715,14 +788,6 @@ window.addEventListener('load', () => {
 
 /* ══════════════════════════════════════════════
    Section 3: Camera – Photos loop forever
-══════════════════════════════════════════════
-   Strategy:
-   - Preload all images to get their natural dimensions.
-   - Compute each card's exact pixel width from aspect ratio.
-   - Launch card 0, and inside launchCard() schedule the NEXT
-     card (index+1 mod N) to fire exactly when the current
-     card's right edge + GAP has cleared x=0 (the clip origin).
-   - This creates a perfectly-spaced infinite conveyor belt.
 ══════════════════════════════════════════════ */
 
 const PHOTO_COUNT = 6;
@@ -739,7 +804,6 @@ function positionPhotoStrip() {
     const camH = camImg.offsetHeight;
     const camW = camImg.offsetWidth;
 
-    // Lens band: 49% – 83% from bottom of camera image
     const lensBottomFromBottom = camH * 0.49;
     const lensTopFromBottom    = camH * 0.83;
 
@@ -781,29 +845,26 @@ function startCameraPhotos() {
         const sW      = section.offsetWidth;
         const { lensHeight, camW } = info;
 
-        const GAP           = 24;    // px gap between cards
-        const SPEED         = 0.12;  // px per ms
+        const GAP           = 24;
+        const SPEED         = 0.12;
         const BORDER_SIDE   = Math.round(lensHeight * 0.05);
         const BORDER_BOTTOM = Math.round(lensHeight * 0.18);
         const INNER_H       = lensHeight - BORDER_SIDE * 2;
         const clipW         = sW - camW;
-        const endX          = clipW + lensHeight * 3; // well off screen right
+        const endX          = clipW + lensHeight * 3;
 
-        // ── Step 1: Preload all images to get natural dimensions ──────────
         const naturalSizes = new Array(PHOTO_COUNT).fill(null);
         let loadedCount = 0;
 
         function onAllLoaded() {
-            // Compute the exact pixel width of each polaroid card
             const cardWidths = naturalSizes.map(({ w, h }) => {
                 const imgW = (w && h) ? Math.round((w / h) * INNER_H) : Math.round(INNER_H * 4 / 3);
-                return imgW + BORDER_SIDE * 2; // total card width incl. left+right border
+                return imgW + BORDER_SIDE * 2;
             });
 
-            // ── Step 2: Infinite conveyor — launchCard schedules itself ──
             function launchCard(photoIndex) {
                 const cardW = cardWidths[photoIndex];
-                const sx    = -cardW; // card starts just left of clip (behind camera)
+                const sx    = -cardW;
 
                 const card = document.createElement('div');
                 card.style.cssText = `
@@ -830,17 +891,10 @@ function startCameraPhotos() {
                 card.appendChild(img);
                 clip.appendChild(card);
 
-                // Schedule next card: fires when THIS card's right edge
-                // has moved GAP pixels past the clip's left boundary (x = 0).
-                // Time for card's right edge to reach x = GAP:
-                //   card starts at sx = -cardW, right edge at sx + cardW = 0
-                //   needs to travel GAP more px → total travel = cardW + GAP
-                //   time = (cardW + GAP) / SPEED  ms
                 const nextIndex = (photoIndex + 1) % PHOTO_COUNT;
                 const delayToNext = (cardW + GAP) / SPEED;
                 setTimeout(() => launchCard(nextIndex), delayToNext);
 
-                // Animate this card across the clip
                 const fadeZone = Math.max(cardW * 1.5, 80);
                 let startTS = null;
 
@@ -849,7 +903,6 @@ function startCameraPhotos() {
                     const x = sx + (ts - startTS) * SPEED;
                     card.style.transform = `translateX(${x}px)`;
 
-                    // Fade out near the right edge of clip
                     const fadeStart = clipW - fadeZone;
                     if (x > fadeStart) {
                         const fadeT = Math.min((x - fadeStart) / fadeZone, 1);
@@ -863,11 +916,9 @@ function startCameraPhotos() {
                 requestAnimationFrame(step);
             }
 
-            // Kick off the first card — the chain self-perpetuates from here
             launchCard(0);
         }
 
-        // Preload with closures to preserve index
         for (let i = 0; i < PHOTO_COUNT; i++) {
             (function(idx) {
                 const tmp = new Image();
@@ -876,7 +927,7 @@ function startCameraPhotos() {
                     if (++loadedCount === PHOTO_COUNT) onAllLoaded();
                 }
                 tmp.onload  = done;
-                tmp.onerror = done; // count failures too so we don't stall
+                tmp.onerror = done;
                 tmp.src = `assets/photo${idx + 1}.${PHOTO_EXT}`;
             })(i);
         }
@@ -889,7 +940,6 @@ function startCameraPhotos() {
     }
 }
 
-/* ─── Observe camera section — fire once only ─── */
 window.addEventListener('load', () => {
     const camImg = document.getElementById('camera-img');
     if (camImg.complete) positionPhotoStrip();
